@@ -1,342 +1,353 @@
-#include "JackTokenizer.h"
+п»ї#include "JackTokenizer.h"
 #include <cctype>
 #include <stdexcept>
 #include <iostream>
 #include <algorithm>
-// Символы языка Jack
+// РЎРёРјРІРѕР»С‹ СЏР·С‹РєР° Jack
 const std::unordered_set<char> JackTokenizer::symbols = {
-    '{', '}', '(', ')', '[', ']', '.', ',', ';', '+',
-    '-', '*', '/', '&', '|', '<', '>', '=', '~'
+	'{', '}', '(', ')', '[', ']', '.', ',', ';', '+',
+	'-', '*', '/', '&', '|', '<', '>', '=', '~'
 };
 
-// Соответствие строк ключевым словам
+// РЎРѕРѕС‚РІРµС‚СЃС‚РІРёРµ СЃС‚СЂРѕРє РєР»СЋС‡РµРІС‹Рј СЃР»РѕРІР°Рј
 const std::unordered_map<std::string, Keyword> JackTokenizer::keywordMap = {
-    {"class", Keyword::CLASS}, {"method", Keyword::METHOD},
-    {"function", Keyword::FUNCTION}, {"constructor", Keyword::CONSTRUCTOR},
-    {"int", Keyword::INT}, {"boolean", Keyword::BOOLEAN},
-    {"char", Keyword::CHAR}, {"void", Keyword::VOID},
-    {"var", Keyword::VAR}, {"static", Keyword::STATIC},
-    {"field", Keyword::FIELD}, {"let", Keyword::LET},
-    {"do", Keyword::DO}, {"if", Keyword::IF}, {"else", Keyword::ELSE},
-    {"while", Keyword::WHILE}, {"return", Keyword::RETURN},
-    {"true", Keyword::TRUE}, {"false", Keyword::FALSE},
-    {"null", Keyword::NULL_}, {"this", Keyword::THIS}
+	{"class", Keyword::CLASS}, {"method", Keyword::METHOD},
+	{"function", Keyword::FUNCTION}, {"constructor", Keyword::CONSTRUCTOR},
+	{"int", Keyword::INT}, {"boolean", Keyword::BOOLEAN},
+	{"char", Keyword::CHAR}, {"void", Keyword::VOID},
+	{"var", Keyword::VAR}, {"static", Keyword::STATIC},
+	{"field", Keyword::FIELD}, {"let", Keyword::LET},
+	{"do", Keyword::DO}, {"if", Keyword::IF}, {"else", Keyword::ELSE},
+	{"while", Keyword::WHILE}, {"return", Keyword::RETURN},
+	{"true", Keyword::TRUE}, {"false", Keyword::FALSE},
+	{"null", Keyword::NULL_}, {"this", Keyword::THIS}
 };
 
 JackTokenizer::JackTokenizer(const std::string& filename)
-    : input(filename), currentType(TokenType::UNKNOWN) {
-    if (!input.is_open()) {
-        throw std::runtime_error("Failed to open file: " + filename);
-    }
+	: input(filename), currentType(TokenType::UNKNOWN) {
+	currentSymbol.clear();
+	if (!input.is_open()) {
+		throw std::runtime_error("Failed to open file: " + filename);
+	}
 }
 
 JackTokenizer::~JackTokenizer() {
-    if (input.is_open()) input.close();
+	if (input.is_open()) input.close();
 }
 
 bool JackTokenizer::hasMoreTokens() const {
-    return !input.eof();
+	return !input.eof();
 }
 
 void JackTokenizer::setDebugMode(bool mode) {
-    debugMode = mode;
+	debugMode = mode;
 }
 void JackTokenizer::readString() {
-    input.get(); // Пропускаем открывающую кавычку "
-    currentString.clear();
-    currentType = TokenType::STRING_CONST;
+	input.get(); // РџСЂРѕРїСѓСЃРєР°РµРј РѕС‚РєСЂС‹РІР°СЋС‰СѓСЋ РєР°РІС‹С‡РєСѓ "
+	currentString.clear();
+	currentType = TokenType::STRING_CONST;
 
-    while (!input.eof()) {
-        char c = input.get();
-        // Запрещаем переносы строк внутри строки
-        if (c == '\n') {
-            throw std::runtime_error("Newline in string literal at line " + std::to_string(lineNumber));
-        }
-        // Закрывающая кавычка
-        if (c == '"') {
-            return;
-        }
-        currentString += c;
-    }
-    // Если дошли до конца файла без закрывающей кавычки
-    throw std::runtime_error("Unclosed string literal starting at line " + std::to_string(lineNumber));
+	while (!input.eof()) {
+		char c = input.get();
+		// Р—Р°РїСЂРµС‰Р°РµРј РїРµСЂРµРЅРѕСЃС‹ СЃС‚СЂРѕРє РІРЅСѓС‚СЂРё СЃС‚СЂРѕРєРё
+		if (c == '\n') {
+			throw std::runtime_error("Newline in string literal at line " + std::to_string(lineNumber));
+		}
+		// Р—Р°РєСЂС‹РІР°СЋС‰Р°СЏ РєР°РІС‹С‡РєР°
+		if (c == '"') {
+			return;
+		}
+		currentString += c;
+	}
+	// Р•СЃР»Рё РґРѕС€Р»Рё РґРѕ РєРѕРЅС†Р° С„Р°Р№Р»Р° Р±РµР· Р·Р°РєСЂС‹РІР°СЋС‰РµР№ РєР°РІС‹С‡РєРё
+	throw std::runtime_error("Unclosed string literal starting at line " + std::to_string(lineNumber));
 }
 
 void JackTokenizer::readNumber() {
-    currentInt = 0;
-    currentType = TokenType::INT_CONST;
+	currentInt = 0;
+	currentType = TokenType::INT_CONST;
 
-    while (!input.eof() && isdigit(input.peek())) {
-        currentInt = currentInt * 10 + (input.get() - '0');
-    }
+	while (!input.eof() && isdigit(input.peek())) {
+		currentInt = currentInt * 10 + (input.get() - '0');
+	}
 }
 
 void JackTokenizer::readKeywordOrIdentifier() {
-    std::string token;
-    currentType = TokenType::IDENTIFIER;
+	std::string token;
+	currentType = TokenType::IDENTIFIER;
 
-    // Считываем символы, пока они являются допустимыми для идентификатора
-    while (!input.eof() && (isalnum(input.peek()) || input.peek() == '_')) {
-        token += input.get();
-    }
+	// РЎС‡РёС‚С‹РІР°РµРј СЃРёРјРІРѕР»С‹, РїРѕРєР° РѕРЅРё СЏРІР»СЏСЋС‚СЃСЏ РґРѕРїСѓСЃС‚РёРјС‹РјРё РґР»СЏ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂР°
+	while (!input.eof() && (isalnum(input.peek()) || input.peek() == '_')) {
+		token += input.get();
+	}
 
-    // Преобразуем в нижний регистр вручную
-    std::string lowerToken;
-    for (char c : token) {
-        // Безопасное преобразование для tolower()
-        lowerToken.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
-    }
+	// РџСЂРµРѕР±СЂР°Р·СѓРµРј РІ РЅРёР¶РЅРёР№ СЂРµРіРёСЃС‚СЂ РІСЂСѓС‡РЅСѓСЋ
+	std::string lowerToken;
+	for (char c : token) {
+		// Р‘РµР·РѕРїР°СЃРЅРѕРµ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ РґР»СЏ tolower()
+		lowerToken.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+	}
 
-    // Проверяем, является ли токен ключевым словом
-    if (keywordMap.find(lowerToken) != keywordMap.end()) {
-        currentType = TokenType::KEYWORD;
-        currentKeyword = keywordMap.at(lowerToken);
-    }
-    else {
-        currentIdentifier = token;
-    }
+	// РџСЂРѕРІРµСЂСЏРµРј, СЏРІР»СЏРµС‚СЃСЏ Р»Рё С‚РѕРєРµРЅ РєР»СЋС‡РµРІС‹Рј СЃР»РѕРІРѕРј
+	if (keywordMap.find(lowerToken) != keywordMap.end()) {
+		currentType = TokenType::KEYWORD;
+		currentKeyword = keywordMap.at(lowerToken);
+	}
+	else {
+		currentIdentifier = token;
+	}
 }
-void JackTokenizer::readSymbol() {
-    currentSymbol = input.get();
-    currentType = TokenType::SYMBOL;
-
-    // Проверка на недопустимые символы
-    static const std::unordered_set<char> validSymbols = {
-        '{', '}', '(', ')', '[', ']', '.', ',', ';', '+',
-        '-', '*', '/', '&', '|', '<', '>', '=', '~'
-    };
-
-    if (!validSymbols.count(currentSymbol)) {
-        throw std::runtime_error("Invalid symbol: " + std::string(1, currentSymbol));
-    }
-}
+//void JackTokenizer::readSymbol() {
+//    currentSymbol = input.get();
+//    currentType = TokenType::SYMBOL;
+//
+//    // РџСЂРѕРІРµСЂРєР° РЅР° РЅРµРґРѕРїСѓСЃС‚РёРјС‹Рµ СЃРёРјРІРѕР»С‹
+//    static const std::unordered_set<char> validSymbols = {
+//        '{', '}', '(', ')', '[', ']', '.', ',', ';', '+',
+//        '-', '*', '/', '&', '|', '<', '>', '=', '~'
+//    };
+//
+//    if (!validSymbols.count(currentSymbol)) {
+//        throw std::runtime_error("Invalid symbol: " +currentSymbol);
+//    }
+//}
 void JackTokenizer::advance() {
-    skipCommentsAndWhitespace();
-    if (input.eof()) {
-        currentType = TokenType::UNKNOWN;
-        return;
-    }
-    // Сохраняем предыдущий номер строки для точного отображения
-    size_t tokenLine = lineNumber;
+	skipCommentsAndWhitespace();
+	if (input.eof()) {
+		currentType = TokenType::UNKNOWN;
+		return;
+	}
 
-    char c = input.peek();
+	size_t tokenLine = lineNumber;
+	char c = input.peek();
+	// РћР±СЂР°Р±РѕС‚РєР° РѕРґРёРЅРѕС‡РЅС‹С… СЃРёРјРІРѕР»РѕРІ
+	if (symbols.count(c)) {
+		currentSymbol = std::string(1, input.get()); // РўРµРїРµСЂСЊ СЃС‚СЂРѕРєР°
+		if (c == '<' || c == '>') {
+			if (input.peek() == '=') {
+				currentSymbol += std::string(1, input.get()); // Р”РѕР±Р°РІР»СЏРµРј "=" в†’ "<=" РёР»Рё ">="
+			}
+		}
+		currentType = TokenType::SYMBOL;
+	}
+	else if (c == '"') {
+		readString();
+		currentType = TokenType::STRING_CONST;
+	}
+	else if (isdigit(c)) {
+		readNumber();
+		currentType = TokenType::INT_CONST;
+	}
+	else if (isalpha(c) || c == '_') {
+		readKeywordOrIdentifier();
+	}
+	else {
+		throw std::runtime_error("Invalid character '" + std::string(1, c) +
+			"' at line " + std::to_string(tokenLine));
+	}
 
-    if (c == '"') {
-        readString();
-    }
-    else if (isdigit(c)) {
-        readNumber();
-    }
-    else if (isalpha(c) || c == '_') {
-        readKeywordOrIdentifier();
-    }
-    else {
-        readSymbol();
-    }
-
-    // Вывод отладочной информации
-    if (debugMode) {
-        getCurrentTokenInfo();
-        std::cout <<" (processed at line " << tokenLine << ")"
-            << std::endl;
-    }
+	// РћС‚Р»Р°РґРѕС‡РЅС‹Р№ РІС‹РІРѕРґ
+	if (debugMode) {
+		getCurrentTokenInfo();
+		std::cout << " (processed at line " << tokenLine << ")" << std::endl;
+	}
 }
-
 void JackTokenizer::skipCommentsAndWhitespace() {
-    bool inComment = false;
+	bool inComment = false;
 
-    while (!input.eof()) {
-        char c = input.peek();
+	while (!input.eof()) {
+		char c = input.peek();
 
-        // Обработка перевода строки
-        if (c == '\n') {
-            lineNumber++;
-            input.get();
-            continue;
-        }
+		// РћР±СЂР°Р±РѕС‚РєР° РїРµСЂРµРІРѕРґР° СЃС‚СЂРѕРєРё
+		if (c == '\n') {
+			lineNumber++;
+			input.get();
+			continue;
+		}
 
-        // Пропускаем пробелы и табы
-        if (isspace(c)) {
-            input.get();
-            continue;
-        }
+		// РџСЂРѕРїСѓСЃРєР°РµРј РїСЂРѕР±РµР»С‹ Рё С‚Р°Р±С‹
+		if (isspace(c)) {
+			input.get();
+			continue;
+		}
 
-        // Проверяем начало комментария
-        if (!inComment && c == '/') {
-            input.get(); // Съедаем '/'
-            char next = input.peek();
+		// РџСЂРѕРІРµСЂСЏРµРј РЅР°С‡Р°Р»Рѕ РєРѕРјРјРµРЅС‚Р°СЂРёСЏ
+		if (!inComment && c == '/') {
+			input.get(); // РЎСЉРµРґР°РµРј '/'
+			char next = input.peek();
 
-            // Однострочный комментарий
-            if (next == '/') {
-                input.get(); // Съедаем второй '/'
-                // Пропускаем до конца строки
-                while (input.peek() != '\n' && !input.eof()) input.get();
-                continue;
-            }
+			// РћРґРЅРѕСЃС‚СЂРѕС‡РЅС‹Р№ РєРѕРјРјРµРЅС‚Р°СЂРёР№
+			if (next == '/') {
+				input.get(); // РЎСЉРµРґР°РµРј РІС‚РѕСЂРѕР№ '/'
+				// РџСЂРѕРїСѓСЃРєР°РµРј РґРѕ РєРѕРЅС†Р° СЃС‚СЂРѕРєРё
+				while (input.peek() != '\n' && !input.eof()) input.get();
+				continue;
+			}
 
-            // Многострочный комментарий
-            else if (next == '*') {
-                input.get(); // Съедаем '*'
-                inComment = true;
-                bool prevStar = false;
+			// РњРЅРѕРіРѕСЃС‚СЂРѕС‡РЅС‹Р№ РєРѕРјРјРµРЅС‚Р°СЂРёР№
+			else if (next == '*') {
+				input.get(); // РЎСЉРµРґР°РµРј '*'
+				inComment = true;
+				bool prevStar = false;
 
-                while (!input.eof()) {
-                    char commentChar = input.get();
+				while (!input.eof()) {
+					char commentChar = input.get();
 
-                    // Учитываем переводы строк в комментариях
-                    if (commentChar == '\n') lineNumber++;
+					// РЈС‡РёС‚С‹РІР°РµРј РїРµСЂРµРІРѕРґС‹ СЃС‚СЂРѕРє РІ РєРѕРјРјРµРЅС‚Р°СЂРёСЏС…
+					if (commentChar == '\n') lineNumber++;
 
-                    // Проверяем окончание комментария
-                    if (prevStar && commentChar == '/') {
-                        inComment = false;
-                        break;
-                    }
-                    prevStar = (commentChar == '*');
-                }
-                continue;
-            }
+					// РџСЂРѕРІРµСЂСЏРµРј РѕРєРѕРЅС‡Р°РЅРёРµ РєРѕРјРјРµРЅС‚Р°СЂРёСЏ
+					if (prevStar && commentChar == '/') {
+						inComment = false;
+						break;
+					}
+					prevStar = (commentChar == '*');
+				}
+				continue;
+			}
 
-            // Не комментарий - возвращаем '/' обратно в поток
-            else {
-                input.putback('/');
-                break;
-            }
-        }
+			// РќРµ РєРѕРјРјРµРЅС‚Р°СЂРёР№ - РІРѕР·РІСЂР°С‰Р°РµРј '/' РѕР±СЂР°С‚РЅРѕ РІ РїРѕС‚РѕРє
+			else {
+				input.putback('/');
+				break;
+			}
+		}
 
-        // Выходим из цикла, если не комментарий и не пробел
-        if (!inComment && !isspace(c)) break;
+		// Р’С‹С…РѕРґРёРј РёР· С†РёРєР»Р°, РµСЃР»Рё РЅРµ РєРѕРјРјРµРЅС‚Р°СЂРёР№ Рё РЅРµ РїСЂРѕР±РµР»
+		if (!inComment && !isspace(c)) break;
 
-        input.get(); // Продолжаем обработку
-    }
+		input.get(); // РџСЂРѕРґРѕР»Р¶Р°РµРј РѕР±СЂР°Р±РѕС‚РєСѓ
+	}
 }
 void JackTokenizer::readNextToken() {
-    char c = input.peek();
+	char c = input.peek();
 
-    // Строковая константа
-    if (c == '"') {
-        input.get();
-        currentType = TokenType::STRING_CONST;
-        while (input.get(c) && c != '"') {
-            currentString += c;
-        }
-        return;
-    }
+	// РЎС‚СЂРѕРєРѕРІР°СЏ РєРѕРЅСЃС‚Р°РЅС‚Р°
+	if (c == '"') {
+		input.get();
+		currentType = TokenType::STRING_CONST;
+		while (input.get(c) && c != '"') {
+			currentString += c;
+		}
+		return;
+	}
 
-    // Числовая константа
-    if (isdigit(c)) {
-        currentType = TokenType::INT_CONST;
-        std::string num;
-        while (isdigit(input.peek())) {
-            num += input.get();
-        }
-        currentInt = std::stoi(num);
-        return;
-    }
+	// Р§РёСЃР»РѕРІР°СЏ РєРѕРЅСЃС‚Р°РЅС‚Р°
+	if (isdigit(c)) {
+		currentType = TokenType::INT_CONST;
+		std::string num;
+		while (isdigit(input.peek())) {
+			num += input.get();
+		}
+		currentInt = std::stoi(num);
+		return;
+	}
 
-    // Символ
-    if (symbols.count(c)) {
-        currentType = TokenType::SYMBOL;
-        input.get(currentSymbol);
-        return;
-    }
+	// РЎРёРјРІРѕР»
+	if (symbols.count(c)) {
+		currentType = TokenType::SYMBOL;
+		char c = input.get(); // Р§РёС‚Р°РµРј СЃРёРјРІРѕР» РІ char
+		currentSymbol = std::string(1, c); // РџСЂРµРѕР±СЂР°Р·СѓРµРј РІ СЃС‚СЂРѕРєСѓ
+		return;
+	}
 
-    // Идентификатор или ключевое слово
-    if (isalpha(c) || c == '_') {
-        std::string token;
-        while (isalnum(input.peek()) || input.peek() == '_') {
-            token += input.get();
-        }
-        token += input.get(); // Последний символ
+	// РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РёР»Рё РєР»СЋС‡РµРІРѕРµ СЃР»РѕРІРѕ
+	if (isalpha(c) || c == '_') {
+		std::string token;
+		while (isalnum(input.peek()) || input.peek() == '_') {
+			token += input.get();
+		}
+		token += input.get(); // РџРѕСЃР»РµРґРЅРёР№ СЃРёРјРІРѕР»
 
-        if (isKeyword(token)) {
-            currentType = TokenType::KEYWORD;
-            currentKeyword = keywordMap.at(token);
-        }
-        else {
-            currentType = TokenType::IDENTIFIER;
-            currentIdentifier = token;
-        }
-        return;
-    }
+		if (isKeyword(token)) {
+			currentType = TokenType::KEYWORD;
+			currentKeyword = keywordMap.at(token);
+		}
+		else {
+			currentType = TokenType::IDENTIFIER;
+			currentIdentifier = token;
+		}
+		return;
+	}
 
-    throw std::runtime_error("Invalid character: " + std::string(1, c));
+	throw std::runtime_error("Invalid character: " + std::string(1, c));
 }
 std::string keywordToString(Keyword keyword) {
-    static const std::unordered_map<Keyword, std::string> map = {
-        {Keyword::CLASS, "class"},
-        {Keyword::METHOD, "method"},
-        {Keyword::FUNCTION, "function"},
-        {Keyword::CONSTRUCTOR, "constructor"},
-        {Keyword::INT, "int"},
-        {Keyword::BOOLEAN, "boolean"},
-        {Keyword::CHAR, "char"},
-        {Keyword::VOID, "void"},
-        {Keyword::VAR, "var"},
-        {Keyword::STATIC, "static"},
-        {Keyword::FIELD, "field"},
-        {Keyword::LET, "let"},
-        {Keyword::DO, "do"},
-        {Keyword::IF, "if"},
-        {Keyword::ELSE, "else"},
-        {Keyword::WHILE, "while"},
-        {Keyword::RETURN, "return"},
-        {Keyword::TRUE, "true"},
-        {Keyword::FALSE, "false"},
-        {Keyword::NULL_, "null"},  // Обратите внимание на NULL_ вместо null
-        {Keyword::THIS, "this"}
-    };
+	static const std::unordered_map<Keyword, std::string> map = {
+		{Keyword::CLASS, "class"},
+		{Keyword::METHOD, "method"},
+		{Keyword::FUNCTION, "function"},
+		{Keyword::CONSTRUCTOR, "constructor"},
+		{Keyword::INT, "int"},
+		{Keyword::BOOLEAN, "boolean"},
+		{Keyword::CHAR, "char"},
+		{Keyword::VOID, "void"},
+		{Keyword::VAR, "var"},
+		{Keyword::STATIC, "static"},
+		{Keyword::FIELD, "field"},
+		{Keyword::LET, "let"},
+		{Keyword::DO, "do"},
+		{Keyword::IF, "if"},
+		{Keyword::ELSE, "else"},
+		{Keyword::WHILE, "while"},
+		{Keyword::RETURN, "return"},
+		{Keyword::TRUE, "true"},
+		{Keyword::FALSE, "false"},
+		{Keyword::NULL_, "null"},  // РћР±СЂР°С‚РёС‚Рµ РІРЅРёРјР°РЅРёРµ РЅР° NULL_ РІРјРµСЃС‚Рѕ null
+		{Keyword::THIS, "this"}
+	};
 
-    try {
-        return map.at(keyword);
-    }
-    catch (const std::out_of_range&) {
-        throw std::runtime_error("Unknown keyword");
-    }
+	try {
+		return map.at(keyword);
+	}
+	catch (const std::out_of_range&) {
+		throw std::runtime_error("Unknown keyword");
+	}
 }
 
 bool JackTokenizer::isKeyword(const std::string& token) const {
-    return keywordMap.count(token);
+	return keywordMap.count(token);
 }
 void JackTokenizer::getCurrentTokenInfo() const {
 
-    // Базовый вывод
-    std::cout << "[DEBUG] Line " << lineNumber << " | ";
+	// Р‘Р°Р·РѕРІС‹Р№ РІС‹РІРѕРґ
+	std::cout << "[DEBUG] Line " << lineNumber << " | ";
 
-    // Обработка каждого типа токена
-    switch (currentType) {
-    case TokenType::KEYWORD:
-        std::cout << "KEYWORD: " << keywordToString(currentKeyword);
-        break;
+	// РћР±СЂР°Р±РѕС‚РєР° РєР°Р¶РґРѕРіРѕ С‚РёРїР° С‚РѕРєРµРЅР°
+	switch (currentType) {
+	case TokenType::KEYWORD:
+		std::cout << "KEYWORD: " << keywordToString(currentKeyword);
+		break;
 
-    case TokenType::SYMBOL:
-        std::cout << "SYMBOL: '" << std::string(1, currentSymbol) << "'"; // Явное создание строки
-        break;
+	case TokenType::SYMBOL:
+		std::cout << "SYMBOL: '" << currentSymbol << "'"; // РЇРІРЅРѕРµ СЃРѕР·РґР°РЅРёРµ СЃС‚СЂРѕРєРё
+		break;
 
-    case TokenType::IDENTIFIER:
-        std::cout << "IDENTIFIER: " << currentIdentifier; // Для std::string operator<< уже определен
-        break;
+	case TokenType::IDENTIFIER:
+		std::cout << "IDENTIFIER: " << currentIdentifier; // Р”Р»СЏ std::string operator<< СѓР¶Рµ РѕРїСЂРµРґРµР»РµРЅ
+		break;
 
-    case TokenType::INT_CONST:
-        std::cout << "INT_CONST: " << currentInt;
-        break;
+	case TokenType::INT_CONST:
+		std::cout << "INT_CONST: " << currentInt;
+		break;
 
-    case TokenType::STRING_CONST:
-        std::cout << "STRING_CONST: \"" << currentString << "\"";
-        break;
+	case TokenType::STRING_CONST:
+		std::cout << "STRING_CONST: \"" << currentString << "\"";
+		break;
 
-    default:
-        std::cout << "UNKNOWN";
-    }
+	default:
+		std::cout << "UNKNOWN";
+	}
 
-    // Добавляем номер строки обработки
-    std::cout << " (processed at line " << lineNumber << ")";
+	// Р”РѕР±Р°РІР»СЏРµРј РЅРѕРјРµСЂ СЃС‚СЂРѕРєРё РѕР±СЂР°Р±РѕС‚РєРё
+	std::cout << " (processed at line " << lineNumber << ")";
 
-    return;
+	return;
 }
-// Геттеры
+// Р“РµС‚С‚РµСЂС‹
 TokenType JackTokenizer::tokenType() const { return currentType; }
 Keyword JackTokenizer::keyWord() const { return currentKeyword; }
-char JackTokenizer::symbol() const { return currentSymbol; }
+std::string JackTokenizer::symbol() const { return currentSymbol; }
 std::string JackTokenizer::identifier() const { return currentIdentifier; }
 int JackTokenizer::intVal() const { return currentInt; }
 std::string JackTokenizer::stringVal() const { return currentString; }

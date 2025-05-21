@@ -10,6 +10,15 @@ void SymbolTable::startSubroutine() {
     varCount_ = 0;
 }
 
+void SymbolTable::defineMethod(const std::string& methodName, const std::string& returnType) {
+    methodReturnTypes[methodName] = returnType;
+}
+
+std::string SymbolTable::getMethodReturnType(const std::string& methodName) const {
+    auto it = methodReturnTypes.find(methodName);
+    return (it != methodReturnTypes.end()) ? it->second : "unknown";
+}
+
 void SymbolTable::define(
     const std::string& name,
     const std::string& type,

@@ -26,7 +26,7 @@ public:
     void getCurrentTokenInfo() const;
     TokenType tokenType() const;
     Keyword keyWord() const;
-    char symbol() const;
+    std::string symbol() const;
     std::string identifier() const;
     int intVal() const;
     std::string stringVal() const;
@@ -37,7 +37,7 @@ public:
     void readString();
     void readNumber();
     void readKeywordOrIdentifier();
-    void readSymbol();
+    //void readSymbol();
 
 
 private:
@@ -48,7 +48,7 @@ private:
     std::ifstream input;
     TokenType currentType;
     Keyword currentKeyword;
-    char currentSymbol;
+    std::string currentSymbol;
     std::string currentIdentifier;
     int currentInt;
 

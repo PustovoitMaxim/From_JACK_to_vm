@@ -50,6 +50,8 @@ int main(int argc, char* argv[]) {
             fs::path vmPath = jackFile;
             vmPath.replace_extension(".vm");
 
+            std::cout << "Compiling file: " << jackFile.filename() << "\n";
+
             // Инициализируем компоненты компилятора
             JackTokenizer tokenizer(jackFile.string());
             VMWriter vmWriter(vmPath.string());

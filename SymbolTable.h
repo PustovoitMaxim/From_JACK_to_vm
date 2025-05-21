@@ -1,4 +1,4 @@
-#pragma once
+п»ї#pragma once
 #include <string>
 #include <unordered_map>
 
@@ -8,16 +8,20 @@ class SymbolTable {
 public:
     SymbolTable();
 
-    // Начать новую подпрограмму (сбрасывает таблицу ARG и VAR)
+    void defineMethod(const std::string& methodName, const std::string& returnType);
+
+    std::string getMethodReturnType(const std::string& methodName) const;
+
+    // РќР°С‡Р°С‚СЊ РЅРѕРІСѓСЋ РїРѕРґРїСЂРѕРіСЂР°РјРјСѓ (СЃР±СЂР°СЃС‹РІР°РµС‚ С‚Р°Р±Р»РёС†Сѓ ARG Рё VAR)
     void startSubroutine();
 
-    // Добавить переменную в таблицу
+    // Р”РѕР±Р°РІРёС‚СЊ РїРµСЂРµРјРµРЅРЅСѓСЋ РІ С‚Р°Р±Р»РёС†Сѓ
     void define(const std::string& name, const std::string& type, VarKind kind);
 
-    // Количество переменных заданного вида
+    // РљРѕР»РёС‡РµСЃС‚РІРѕ РїРµСЂРµРјРµРЅРЅС‹С… Р·Р°РґР°РЅРЅРѕРіРѕ РІРёРґР°
     int varCount(VarKind kind) const;
 
-    // Получить информацию о переменной
+    // РџРѕР»СѓС‡РёС‚СЊ РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ РїРµСЂРµРјРµРЅРЅРѕР№
     VarKind kindOf(const std::string& name) const;
     std::string typeOf(const std::string& name) const;
     int indexOf(const std::string& name) const;
@@ -29,11 +33,11 @@ private:
         int index;
     };
 
-    // Таблицы символов
+    // РўР°Р±Р»РёС†С‹ СЃРёРјРІРѕР»РѕРІ
     std::unordered_map<std::string, Symbol> classTable;      // STATIC, FIELD
     std::unordered_map<std::string, Symbol> subroutineTable; // ARG, VAR
-
-    // Счетчики переменных
+    std::unordered_map<std::string, std::string> methodReturnTypes; // methodName в†’ returnType
+    // РЎС‡РµС‚С‡РёРєРё РїРµСЂРµРјРµРЅРЅС‹С…
     int staticCount;
     int fieldCount;
     int argCount;

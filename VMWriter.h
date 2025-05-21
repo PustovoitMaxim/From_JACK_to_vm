@@ -1,48 +1,48 @@
-#pragma once
+п»ї#pragma once
 #include <fstream>
 #include <string>
+#include <unordered_map>
 
 class VMWriter {
 public:
-    // Конструктор: открывает выходной файл .vm
+    // РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ: РѕС‚РєСЂС‹РІР°РµС‚ РІС‹С…РѕРґРЅРѕР№ С„Р°Р№Р» .vm
     explicit VMWriter(const std::string& filename);
 
-    // Деструктор: закрывает файл при необходимости
+    // Р”РµСЃС‚СЂСѓРєС‚РѕСЂ: Р·Р°РєСЂС‹РІР°РµС‚ С„Р°Р№Р» РїСЂРё РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё
     ~VMWriter();
 
-    // Записывает команду push
+    // Р—Р°РїРёСЃС‹РІР°РµС‚ РєРѕРјР°РЅРґСѓ push
     void writePush(const std::string& segment, int index);
 
-    // Записывает команду pop
+    // Р—Р°РїРёСЃС‹РІР°РµС‚ РєРѕРјР°РЅРґСѓ pop
     void writePop(const std::string& segment, int index);
 
-    // Записывает арифметическую/логическую команду
+    // Р—Р°РїРёСЃС‹РІР°РµС‚ Р°СЂРёС„РјРµС‚РёС‡РµСЃРєСѓСЋ/Р»РѕРіРёС‡РµСЃРєСѓСЋ РєРѕРјР°РЅРґСѓ
     void writeArithmetic(const std::string& command);
 
-    // Записывает метку
+    // Р—Р°РїРёСЃС‹РІР°РµС‚ РјРµС‚РєСѓ
     void writeLabel(const std::string& label);
 
-    // Записывает безусловный переход (goto)
+    // Р—Р°РїРёСЃС‹РІР°РµС‚ Р±РµР·СѓСЃР»РѕРІРЅС‹Р№ РїРµСЂРµС…РѕРґ (goto)
     void writeGoto(const std::string& label);
 
-    // Записывает условный переход (if-goto)
+    // Р—Р°РїРёСЃС‹РІР°РµС‚ СѓСЃР»РѕРІРЅС‹Р№ РїРµСЂРµС…РѕРґ (if-goto)
     void writeIf(const std::string& label);
 
-    // Записывает вызов функции
+    // Р—Р°РїРёСЃС‹РІР°РµС‚ РІС‹Р·РѕРІ С„СѓРЅРєС†РёРё
     void writeCall(const std::string& name, int nArgs);
 
-    // Записывает объявление функции
+    // Р—Р°РїРёСЃС‹РІР°РµС‚ РѕР±СЉСЏРІР»РµРЅРёРµ С„СѓРЅРєС†РёРё
     void writeFunction(const std::string& name, int nLocals);
 
-    // Записывает return
+    // Р—Р°РїРёСЃС‹РІР°РµС‚ return
     void writeReturn();
 
-    // Закрывает выходной файл
+    // Р—Р°РєСЂС‹РІР°РµС‚ РІС‹С…РѕРґРЅРѕР№ С„Р°Р№Р»
     void close();
 
 private:
     std::ofstream outputFile;
     bool isFileOpen = false;
-
     void checkFile() const;
 };

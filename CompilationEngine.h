@@ -30,18 +30,25 @@ public:
     void compileTerm();
     void compileExpressionList();
     void compileSubroutineCall(const std::string& identifier);
+
 private:
     // Вспомогательные методы
+
     void expect(const std::string& expected);
-    void consumeSymbol(char symbol);
+    void consumeSymbol(std::string symbol);
     void consumeKeyword(Keyword keyword);
     void eat();
+
     // Преобразует VarKind в VM-сегмент
+
     std::string kindToSegment(VarKind kind) const;
+
     // Генерация уникальных меток
+
     std::string generateLabel(const std::string& prefix);
-    bool isOperator(char c) const;
+    bool isOperator(std::string c) const;
     bool isUnaryOp() const;
+    bool isBuiltInClass(const std::string& className) const;
     void emitOperator(const std::string& op);
 
     
