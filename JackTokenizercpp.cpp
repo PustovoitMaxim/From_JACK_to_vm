@@ -43,23 +43,23 @@ void JackTokenizer::setDebugMode(bool mode) {
 	debugMode = mode;
 }
 void JackTokenizer::readString() {
-	input.get(); // Пропускаем открывающую кавычку "
+	input.get(); 
 	currentString.clear();
 	currentType = TokenType::STRING_CONST;
 
 	while (!input.eof()) {
 		char c = input.get();
-		// Запрещаем переносы строк внутри строки
+		
 		if (c == '\n') {
 			throw std::runtime_error("Newline in string literal at line " + std::to_string(lineNumber));
 		}
-		// Закрывающая кавычка
+		
 		if (c == '"') {
 			return;
 		}
 		currentString += c;
 	}
-	// Если дошли до конца файла без закрывающей кавычки
+	
 	throw std::runtime_error("Unclosed string literal starting at line " + std::to_string(lineNumber));
 }
 
@@ -76,19 +76,19 @@ void JackTokenizer::readKeywordOrIdentifier() {
 	std::string token;
 	currentType = TokenType::IDENTIFIER;
 
-	// Считываем символы, пока они являются допустимыми для идентификатора
+	
 	while (!input.eof() && (isalnum(input.peek()) || input.peek() == '_')) {
 		token += input.get();
 	}
 
-	// Преобразуем в нижний регистр вручную
+
 	std::string lowerToken;
 	for (char c : token) {
-		// Безопасное преобразование для tolower()
+		
 		lowerToken.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
 	}
 
-	// Проверяем, является ли токен ключевым словом
+
 	if (keywordMap.find(lowerToken) != keywordMap.end()) {
 		currentType = TokenType::KEYWORD;
 		currentKeyword = keywordMap.at(lowerToken);
@@ -97,20 +97,7 @@ void JackTokenizer::readKeywordOrIdentifier() {
 		currentIdentifier = token;
 	}
 }
-//void JackTokenizer::readSymbol() {
-//    currentSymbol = input.get();
-//    currentType = TokenType::SYMBOL;
-//
-//    // Проверка на недопустимые символы
-//    static const std::unordered_set<char> validSymbols = {
-//        '{', '}', '(', ')', '[', ']', '.', ',', ';', '+',
-//        '-', '*', '/', '&', '|', '<', '>', '=', '~'
-//    };
-//
-//    if (!validSymbols.count(currentSymbol)) {
-//        throw std::runtime_error("Invalid symbol: " +currentSymbol);
-//    }
-//}
+
 void JackTokenizer::advance() {
 	skipCommentsAndWhitespace();
 	if (input.eof()) {
@@ -120,12 +107,12 @@ void JackTokenizer::advance() {
 
 	size_t tokenLine = lineNumber;
 	char c = input.peek();
-	// Обработка одиночных символов
+	
 	if (symbols.count(c)) {
-		currentSymbol = std::string(1, input.get()); // Теперь строка
+		currentSymbol = std::string(1, input.get()); 
 		if (c == '<' || c == '>') {
 			if (input.peek() == '=') {
-				currentSymbol += std::string(1, input.get()); // Добавляем "=" → "<=" или ">="
+				currentSymbol += std::string(1, input.get()); 
 			}
 		}
 		currentType = TokenType::SYMBOL;
@@ -146,7 +133,6 @@ void JackTokenizer::advance() {
 			"' at line " + std::to_string(tokenLine));
 	}
 
-	// Отладочный вывод
 	if (debugMode) {
 		getCurrentTokenInfo();
 		std::cout << " (processed at line " << tokenLine << ")" << std::endl;
@@ -158,45 +144,38 @@ void JackTokenizer::skipCommentsAndWhitespace() {
 	while (!input.eof()) {
 		char c = input.peek();
 
-		// Обработка перевода строки
 		if (c == '\n') {
 			lineNumber++;
 			input.get();
 			continue;
 		}
 
-		// Пропускаем пробелы и табы
 		if (isspace(c)) {
 			input.get();
 			continue;
 		}
 
-		// Проверяем начало комментария
 		if (!inComment && c == '/') {
-			input.get(); // Съедаем '/'
+			input.get(); 
 			char next = input.peek();
 
-			// Однострочный комментарий
 			if (next == '/') {
-				input.get(); // Съедаем второй '/'
-				// Пропускаем до конца строки
+				input.get(); 
+				
 				while (input.peek() != '\n' && !input.eof()) input.get();
 				continue;
 			}
 
-			// Многострочный комментарий
 			else if (next == '*') {
-				input.get(); // Съедаем '*'
+				input.get(); 
 				inComment = true;
 				bool prevStar = false;
 
 				while (!input.eof()) {
 					char commentChar = input.get();
 
-					// Учитываем переводы строк в комментариях
 					if (commentChar == '\n') lineNumber++;
 
-					// Проверяем окончание комментария
 					if (prevStar && commentChar == '/') {
 						inComment = false;
 						break;
@@ -206,19 +185,18 @@ void JackTokenizer::skipCommentsAndWhitespace() {
 				continue;
 			}
 
-			// Не комментарий - возвращаем '/' обратно в поток
 			else {
 				input.putback('/');
 				break;
 			}
 		}
 
-		// Выходим из цикла, если не комментарий и не пробел
 		if (!inComment && !isspace(c)) break;
 
-		input.get(); // Продолжаем обработку
+		input.get();
 	}
 }
+// Считывание следующего символа
 void JackTokenizer::readNextToken() {
 	char c = input.peek();
 
@@ -246,8 +224,8 @@ void JackTokenizer::readNextToken() {
 	// Символ
 	if (symbols.count(c)) {
 		currentType = TokenType::SYMBOL;
-		char c = input.get(); // Читаем символ в char
-		currentSymbol = std::string(1, c); // Преобразуем в строку
+		char c = input.get(); 
+		currentSymbol = std::string(1, c); 
 		return;
 	}
 
@@ -257,7 +235,7 @@ void JackTokenizer::readNextToken() {
 		while (isalnum(input.peek()) || input.peek() == '_') {
 			token += input.get();
 		}
-		token += input.get(); // Последний символ
+		token += input.get(); 
 
 		if (isKeyword(token)) {
 			currentType = TokenType::KEYWORD;
@@ -293,7 +271,7 @@ std::string keywordToString(Keyword keyword) {
 		{Keyword::RETURN, "return"},
 		{Keyword::TRUE, "true"},
 		{Keyword::FALSE, "false"},
-		{Keyword::NULL_, "null"},  // Обратите внимание на NULL_ вместо null
+		{Keyword::NULL_, "null"}, 
 		{Keyword::THIS, "this"}
 	};
 
@@ -310,7 +288,7 @@ bool JackTokenizer::isKeyword(const std::string& token) const {
 }
 void JackTokenizer::getCurrentTokenInfo() const {
 
-	// Базовый вывод
+	
 	std::cout << "[DEBUG] Line " << lineNumber << " | ";
 
 	// Обработка каждого типа токена
@@ -320,11 +298,11 @@ void JackTokenizer::getCurrentTokenInfo() const {
 		break;
 
 	case TokenType::SYMBOL:
-		std::cout << "SYMBOL: '" << currentSymbol << "'"; // Явное создание строки
+		std::cout << "SYMBOL: '" << currentSymbol << "'"; 
 		break;
 
 	case TokenType::IDENTIFIER:
-		std::cout << "IDENTIFIER: " << currentIdentifier; // Для std::string operator<< уже определен
+		std::cout << "IDENTIFIER: " << currentIdentifier;
 		break;
 
 	case TokenType::INT_CONST:
@@ -339,7 +317,7 @@ void JackTokenizer::getCurrentTokenInfo() const {
 		std::cout << "UNKNOWN";
 	}
 
-	// Добавляем номер строки обработки
+	
 	std::cout << " (processed at line " << lineNumber << ")";
 
 	return;

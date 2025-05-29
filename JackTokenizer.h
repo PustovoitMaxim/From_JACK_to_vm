@@ -37,7 +37,6 @@ public:
     void readString();
     void readNumber();
     void readKeywordOrIdentifier();
-    //void readSymbol();
 
 
 private:

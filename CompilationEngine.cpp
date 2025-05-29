@@ -9,7 +9,7 @@ CompilationEngine::CompilationEngine(JackTokenizer& t,
     SymbolTable& s,
     const std::string& cName)
     : tokenizer(t), vmWriter(v), symbolTable(s), className(cName) {
-    tokenizer.advance(); // Загружаем первый токен
+    tokenizer.advance(); 
 }
 
 // Компиляция класса
@@ -64,14 +64,13 @@ void CompilationEngine::compileSubroutine() {
     Keyword subroutineType = tokenizer.keyWord();
     eat();
 
-    // Определяем возвращаемый тип метода
     std::string returnType;
     if (tokenizer.tokenType() == TokenType::KEYWORD && tokenizer.keyWord() == Keyword::VOID) {
         returnType = "void";
         eat();
     }
     else {
-        // Обработка int, char, boolean или пользовательского типа
+        
         if (tokenizer.tokenType() == TokenType::KEYWORD) {
             returnType = keywordToString(tokenizer.keyWord());
         }
@@ -81,11 +80,11 @@ void CompilationEngine::compileSubroutine() {
         eat();
     }
 
-    // Сохраняем возвращаемый тип в таблице символов
+    
     std::string subroutineName = tokenizer.identifier();
     symbolTable.defineMethod(className + "." + subroutineName, returnType);
 
-    // Формируем полное имя подпрограммы
+    
     currentSubroutine = className + "." + subroutineName;
     eat();
 
@@ -93,16 +92,16 @@ void CompilationEngine::compileSubroutine() {
     compileParameterList();
     consumeSymbol(")");
 
-    // Тело подпрограммы
+    
     consumeSymbol("{");
     while (tokenizer.tokenType() == TokenType::KEYWORD && tokenizer.keyWord() == Keyword::VAR) {
         compileVarDec();
     }
 
-    // Генерация объявления функции
+    
     vmWriter.writeFunction(currentSubroutine, symbolTable.varCount(VarKind::VAR));
 
-    // Обработка this
+    
     switch (subroutineType) {
     case Keyword::CONSTRUCTOR: {
         int fieldCount = symbolTable.varCount(VarKind::FIELD);
@@ -138,42 +137,41 @@ void CompilationEngine::compileLet() {
     VarKind kind;
     int varIndex;
 
-    // Обработка индекса массива (arr[i])
+    
     if (tokenizer.symbol() == "[") {
         isArray = true;
         eat();
 
-        // Получаем информацию о переменной
+        
         kind = symbolTable.kindOf(varName);
         varIndex = symbolTable.indexOf(varName);
 
-        // Генерируем код для вычисления адреса элемента
-        // 1. Загружаем базовый адрес массива
+        
         vmWriter.writePush(kindToSegment(kind), varIndex);
 
-        // 2. Компилируем индекс (выражение внутри [])
+        
         compileExpression();
         consumeSymbol("]");
 
-        // 3. Вычисляем адрес элемента: base + index
+        
         vmWriter.writeArithmetic("add");
 
-        // 4. Сохраняем адрес в регистре 'that'
+        
         vmWriter.writePop("pointer", 1);
     }
 
-    // Обработка правой части присваивания
+    
     consumeSymbol("=");
     compileExpression();
     consumeSymbol(";");
 
-    // Запись значения в память
+    
     if (isArray) {
-        // Записываем значение в вычисленный адрес (that[0])
+        
         vmWriter.writePop("that", 0);
     }
     else {
-        // Запись в обычную переменную
+       
         kind = symbolTable.kindOf(varName);
         varIndex = symbolTable.indexOf(varName);
         vmWriter.writePop(kindToSegment(kind), varIndex);
@@ -189,18 +187,17 @@ void CompilationEngine::compileIf() {
     compileExpression();
     consumeSymbol(")");
 
-    // Условие: если выражение ложно, переходим к else
+    
     vmWriter.writeIf(elseLabel);
-    // Пропускаем блок else
+    
     vmWriter.writeGoto(endLabel);
-    // Метка else
+    
     vmWriter.writeLabel(elseLabel);
-    // Блок if (выполняется, если условие истинно)
+    
     consumeSymbol("{");
     compileStatements();
     consumeSymbol("}");
 
-    // Блок else (если есть)
     if (tokenizer.tokenType() == TokenType::KEYWORD && tokenizer.keyWord() == Keyword::ELSE) {
         eat();
         consumeSymbol("{");
@@ -208,7 +205,6 @@ void CompilationEngine::compileIf() {
         consumeSymbol("}");
     }
 
-    // Метка конца условия
     vmWriter.writeLabel(endLabel);
 }
 std::string CompilationEngine::kindToSegment(VarKind kind) const {
@@ -232,10 +228,8 @@ void CompilationEngine::compileParameterList() {
     }
 
     while (true) {
-        // 1. Обработка типа параметра
         std::string type;
         if (tokenizer.tokenType() == TokenType::KEYWORD) {
-            // Проверяем допустимые базовые типы
             if (tokenizer.keyWord() == Keyword::INT ||
                 tokenizer.keyWord() == Keyword::CHAR ||
                 tokenizer.keyWord() == Keyword::BOOLEAN) {
@@ -246,28 +240,24 @@ void CompilationEngine::compileParameterList() {
             }
         }
         else if (tokenizer.tokenType() == TokenType::IDENTIFIER) {
-            type = tokenizer.identifier(); // Пользовательский тип
+            type = tokenizer.identifier();
         }
         else {
             throw std::runtime_error("Expected parameter type");
         }
         eat();
-
-        // 2. Обработка имени параметра
         if (tokenizer.tokenType() != TokenType::IDENTIFIER) {
             throw std::runtime_error("Expected parameter name");
         }
         std::string name = tokenizer.identifier();
         eat();
 
-        // 3. Добавление в таблицу символов
         symbolTable.define(name, type, VarKind::ARG);
 
-        // 4. Проверка следующего параметра
         if (tokenizer.tokenType() != TokenType::SYMBOL || tokenizer.symbol() != ",") {
             break;
         }
-        eat(); // Пропускаем запятую
+        eat();
     }
 }
 
@@ -330,7 +320,6 @@ void CompilationEngine::compileDo() {
     bool isBuiltIn = false;
 
     if (tokenizer.symbol() == "(") {
-        // Вызов метода текущего класса (например, Main.doSomething())
         eat();
         compileExpressionList();
         nArgs = currentExpressionCount;
@@ -349,7 +338,6 @@ void CompilationEngine::compileDo() {
         consumeSymbol(")");
 
         if (symbolTable.kindOf(identifier) != VarKind::NONE) {
-            // Вызов метода объекта
             VarKind kind = symbolTable.kindOf(identifier);
             std::string className = symbolTable.typeOf(identifier);
             fullMethodName = className + "." + methodName;
@@ -358,7 +346,6 @@ void CompilationEngine::compileDo() {
             vmWriter.writeCall(fullMethodName, nArgs + 1);
         }
         else {
-            // Статический вызов (например, Math.multiply())
             fullMethodName = identifier + "." + methodName;
             isBuiltIn = isBuiltInClass(identifier);
             vmWriter.writeCall(fullMethodName, nArgs);
@@ -367,7 +354,6 @@ void CompilationEngine::compileDo() {
 
     consumeSymbol(";");
 
-    // Удаляем результат только для non-void методов пользовательских классов
     std::string returnType = symbolTable.getMethodReturnType(fullMethodName);
     if (returnType != "void") {
             vmWriter.writePop("temp", 0);
@@ -379,7 +365,6 @@ void CompilationEngine::compileReturn() {
     if (tokenizer.tokenType() != TokenType::SYMBOL || tokenizer.symbol() != ";") {
         compileExpression();
     } else {
-        // Для void-функций
         vmWriter.writePush("constant", 0);
     }
     
@@ -441,7 +426,7 @@ void CompilationEngine::compileTerm() {
             eat();
             
             if (tokenizer.symbol() == "[") {
-                // Обработка массива
+               
                 eat();
                 compileExpression();
                 consumeSymbol("]");
@@ -453,11 +438,9 @@ void CompilationEngine::compileTerm() {
                 vmWriter.writePush("that", 0);
             } 
             else if (tokenizer.symbol() == "(" || tokenizer.symbol() == ".") {
-                // Обработка вызовов методов
                 compileSubroutineCall(identifier);
             }
             else {
-                // Обычная переменная
                 VarKind kind = symbolTable.kindOf(identifier);
                 vmWriter.writePush(kindToSegment(kind), symbolTable.indexOf(identifier));
             }
@@ -485,10 +468,10 @@ void CompilationEngine::compileTerm() {
 }
 
 void CompilationEngine::compileExpressionList() {
-    currentExpressionCount = 0; // Сброс счетчика
+    currentExpressionCount = 0; 
     while (tokenizer.tokenType() != TokenType::SYMBOL || tokenizer.symbol() != ")") {
         compileExpression();
-        currentExpressionCount++; // Увеличиваем счетчик
+        currentExpressionCount++; 
         if (tokenizer.symbol() == ",") {
             eat();
         }
@@ -524,12 +507,12 @@ void CompilationEngine::consumeSymbol(std::string symbol) {
         msg += "'";
         throw std::runtime_error(msg);
     }
-    eat(); // Переходим к следующему токену
+    eat(); 
 }
 
 // Потребляет ключевое слово, проверяя его корректность
 void CompilationEngine::consumeKeyword(Keyword expectedKeyword) {
-    // Получаем текстовое представление текущего токена
+ 
     std::string currentTokenStr;
 
     switch (tokenizer.tokenType()) {
@@ -569,8 +552,6 @@ std::string CompilationEngine::generateLabel(const std::string& prefix) {
     return className + "_" + prefix + "_" + std::to_string(labelCounter++);
 }
 
-// Вспомогательная функция для преобразования Keyword в строку (должна быть реализована отдельно)
-
     bool CompilationEngine::isOperator(std::string c) const {
         static const std::unordered_set<std::string> operators = {
             "+", "-", "*", "/",
@@ -586,7 +567,6 @@ std::string CompilationEngine::generateLabel(const std::string& prefix) {
     }
     // Преобразует операторы Jack в VM-команды
     void CompilationEngine::emitOperator(const std::string& op) {
-        // Обработка составных операторов сравнения
         if (op == "<=") {
             vmWriter.writeArithmetic("gt");
             vmWriter.writeArithmetic("not");
@@ -598,7 +578,6 @@ std::string CompilationEngine::generateLabel(const std::string& prefix) {
             return;
         }
 
-        // Таблица соответствия операторов и VM-команд
         static const std::unordered_map<std::string, std::string> opMap = {
             {"+", "add"},
             {"-", "sub"},
@@ -617,7 +596,7 @@ std::string CompilationEngine::generateLabel(const std::string& prefix) {
             const std::string& cmd = it->second;
 
             if (cmd.starts_with("call")) {
-                // Исправление: корректное извлечение функции и аргументов
+                
                 size_t firstSpace = cmd.find(' ');
                 size_t secondSpace = cmd.find(' ', firstSpace + 1);
 
@@ -646,23 +625,21 @@ std::string CompilationEngine::generateLabel(const std::string& prefix) {
         bool isBuiltIn = false;
         std::string fullName;
 
-        // Обработка вызовов вида object.method()
         if (tokenizer.symbol() == ".") {
-            eat(); // Съедаем точку
+            eat(); 
 
             subroutineName = tokenizer.identifier();
             eat();
 
             VarKind kind = symbolTable.kindOf(classOrVarName);
             if (kind != VarKind::NONE) {
-                // 1. Загружаем объект (this) в стек ПЕРВЫМ
+             
                 vmWriter.writePush(kindToSegment(kind), symbolTable.indexOf(classOrVarName));
                 classOrVarName = symbolTable.typeOf(classOrVarName);
                 isMethodCall = true;
-                nArgs = 1; // Учитываем this
+                nArgs = 1; 
             }
             else {
-                // Статический вызов (например, String.new)
                 isMethodCall = false;
             }
 
@@ -670,27 +647,22 @@ std::string CompilationEngine::generateLabel(const std::string& prefix) {
             isBuiltIn = isBuiltInClass(classOrVarName);
         }
         else {
-            // Обработка вызовов вида method() (неявный this)
             isMethodCall = true;
             subroutineName = classOrVarName;
             fullName = className + "." + subroutineName;
             isBuiltIn = isBuiltInClass(className);
 
-            // Загружаем неявный this
             vmWriter.writePush("pointer", 0);
             nArgs = 1;
         }
 
-        // Обработка аргументов (после this)
         consumeSymbol("(");
-        compileExpressionList(); // Аргументы добавляются в стек после this
+        compileExpressionList(); 
         nArgs += currentExpressionCount;
         consumeSymbol(")");
 
-        // Вызов метода
         vmWriter.writeCall(fullName, nArgs);
 
-        // Всегда удаляем результат для оператора do
         vmWriter.writePop("temp", 0);
     }
     bool CompilationEngine::isBuiltInClass(const std::string& className) const {
